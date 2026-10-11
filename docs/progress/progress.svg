@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 310" width="1000" height="310">
 <rect x="0.00" y="0.00" width="1000.00" height="310.00" fill="#0d1117" stroke="#0d1117" stroke-width="0"/>
-<text x="4.00" y="21.00" font-family="sans-serif" font-size="16" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">System libraries*: 93.98% (3185/3389)</text>
+<text x="4.00" y="21.00" font-family="sans-serif" font-size="16" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">System libraries*: 94.36% (3198/3389)</text>
 <g><title>libc: 679/680 (100%)</title>
 <rect x="1.00" y="31.00" width="6.11" height="6.38" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="7.11" y="31.00" width="6.11" height="6.38" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -2043,7 +2043,7 @@
 <rect x="382.82" y="30.00" width="38.66" height="53.95" fill="none" stroke="#0d1117" stroke-width="2"/>
 <text x="387.82" y="46.00" font-family="sans-serif" font-size="12" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">AgcD</text>
 </g>
-<g><title>libSceNet: 49/50 (98%)</title>
+<g><title>libSceNet: 50/50 (100%)</title>
 <rect x="422.48" y="31.00" width="5.98" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="428.46" y="31.00" width="5.98" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="434.44" y="31.00" width="5.98" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -2093,7 +2093,7 @@
 <rect x="429.65" y="77.18" width="7.18" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="436.83" y="77.18" width="7.18" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="444.01" y="77.18" width="7.18" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="451.19" y="77.18" width="7.18" height="5.77" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="451.19" y="77.18" width="7.18" height="5.77" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="421.48" y="30.00" width="37.90" height="53.95" fill="none" stroke="#0d1117" stroke-width="2"/>
 <text x="426.48" y="46.00" font-family="sans-serif" font-size="12" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">Net</text>
 </g>
@@ -2409,7 +2409,7 @@
 <rect x="263.06" y="276.62" width="42.88" height="33.38" fill="none" stroke="#0d1117" stroke-width="2"/>
 <text x="268.06" y="292.62" font-family="sans-serif" font-size="12" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">Ajm.</text>
 </g>
-<g><title>libScePad: 33/35 (94%)</title>
+<g><title>libScePad: 34/35 (97%)</title>
 <rect x="306.93" y="84.95" width="6.23" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="313.17" y="84.95" width="6.23" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="319.40" y="84.95" width="6.23" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -2443,7 +2443,7 @@
 <rect x="306.93" y="113.57" width="7.48" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="314.41" y="113.57" width="7.48" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="321.89" y="113.57" width="7.48" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="329.37" y="113.57" width="7.48" height="5.72" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="329.37" y="113.57" width="7.48" height="5.72" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="336.85" y="113.57" width="7.48" height="5.72" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="305.93" y="83.95" width="39.39" height="36.34" fill="none" stroke="#0d1117" stroke-width="2"/>
 <text x="310.93" y="99.95" font-family="sans-serif" font-size="12" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">Pad</text>
@@ -2693,7 +2693,7 @@
 <rect x="372.11" y="120.29" width="33.09" height="34.61" fill="none" stroke="#0d1117" stroke-width="2"/>
 <text x="377.11" y="136.29" font-family="sans-serif" font-size="12" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">Sav</text>
 </g>
-<g><title>libSceNpWebApi2: 26/27 (96%)</title>
+<g><title>libSceNpWebApi2: 27/27 (100%)</title>
 <rect x="406.19" y="121.29" width="4.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="411.18" y="121.29" width="4.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="416.16" y="121.29" width="4.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -2720,7 +2720,7 @@
 <rect x="412.17" y="147.38" width="5.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="418.16" y="147.38" width="5.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="424.14" y="147.38" width="5.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="430.12" y="147.38" width="5.98" height="6.52" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="430.12" y="147.38" width="5.98" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="405.19" y="120.29" width="31.90" height="34.61" fill="none" stroke="#0d1117" stroke-width="2"/>
 <text x="410.19" y="136.29" font-family="sans-serif" font-size="12" fill="#ffffff" stroke="#0d1117" stroke-width="3" paint-order="stroke">NpW</text>
 </g>
@@ -2753,7 +2753,7 @@
 <rect x="461.08" y="147.38" width="5.74" height="6.52" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="437.10" y="120.29" width="30.72" height="34.61" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
-<g><title>libSceAudioPropagation: 22/23 (96%)</title>
+<g><title>libSceAudioPropagation: 23/23 (100%)</title>
 <rect x="468.82" y="121.29" width="5.04" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="473.86" y="121.29" width="5.04" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="478.89" y="121.29" width="5.04" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -2776,7 +2776,7 @@
 <rect x="468.82" y="147.38" width="6.29" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="475.12" y="147.38" width="6.29" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="481.41" y="147.38" width="6.29" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="487.71" y="147.38" width="6.29" height="6.52" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="487.71" y="147.38" width="6.29" height="6.52" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="467.82" y="120.29" width="27.18" height="34.61" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
 <g><title>libSceSystemGesture: 22/22 (100%)</title>
@@ -3035,7 +3035,7 @@
 <rect x="375.84" y="172.39" width="7.29" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="360.25" y="154.90" width="23.88" height="23.98" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
-<g><title>libSceAppContent: 12/13 (92%)</title>
+<g><title>libSceAppContent: 13/13 (100%)</title>
 <rect x="385.13" y="155.90" width="5.04" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="390.18" y="155.90" width="5.04" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="395.22" y="155.90" width="5.04" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -3048,7 +3048,7 @@
 <rect x="398.58" y="166.89" width="6.72" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="385.13" y="172.39" width="6.72" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="391.86" y="172.39" width="6.72" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="398.58" y="172.39" width="6.72" height="5.49" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="398.58" y="172.39" width="6.72" height="5.49" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="384.13" y="154.90" width="22.17" height="23.98" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
 <g><title>libSceAudio3d: 13/13 (100%)</title>
@@ -3145,7 +3145,7 @@
 <rect x="373.85" y="219.48" width="6.30" height="5.37" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="360.25" y="202.37" width="20.90" height="23.48" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
-<g><title>libSceContentSearch: 7/11 (64%)</title>
+<g><title>libSceContentSearch: 11/11 (100%)</title>
 <rect x="361.25" y="226.85" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="365.98" y="226.85" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="370.70" y="226.85" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
@@ -3153,10 +3153,10 @@
 <rect x="361.25" y="233.36" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="365.98" y="233.36" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="370.70" y="233.36" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="375.43" y="233.36" width="4.72" height="6.51" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="361.25" y="239.87" width="6.30" height="6.51" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="367.55" y="239.87" width="6.30" height="6.51" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="373.85" y="239.87" width="6.30" height="6.51" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="375.43" y="233.36" width="4.72" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="361.25" y="239.87" width="6.30" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="367.55" y="239.87" width="6.30" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="373.85" y="239.87" width="6.30" height="6.51" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="360.25" y="225.85" width="20.90" height="21.53" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
 <g><title>libSceNpCommerce: 11/11 (100%)</title>
@@ -3360,15 +3360,15 @@
 <rect x="410.34" y="211.70" width="8.41" height="5.13" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="400.94" y="200.44" width="18.81" height="17.39" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
-<g><title>libSceBluetoothHid: 5/8 (62%)</title>
+<g><title>libSceBluetoothHid: 8/8 (100%)</title>
 <rect x="420.75" y="201.44" width="5.60" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="426.35" y="201.44" width="5.60" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="431.96" y="201.44" width="5.60" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="420.75" y="206.57" width="5.60" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="426.35" y="206.57" width="5.60" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="431.96" y="206.57" width="5.60" height="5.13" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="420.75" y="211.70" width="8.41" height="5.13" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="429.16" y="211.70" width="8.41" height="5.13" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="431.96" y="206.57" width="5.60" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="420.75" y="211.70" width="8.41" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="429.16" y="211.70" width="8.41" height="5.13" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="419.75" y="200.44" width="18.81" height="17.39" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
 <g><title>libSceImeDialog: 8/8 (100%)</title>
@@ -3639,11 +3639,11 @@
 <rect x="474.76" y="259.18" width="5.75" height="5.06" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="468.01" y="253.12" width="13.50" height="12.12" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
-<g><title>libSceContentDelete: 3/4 (75%)</title>
+<g><title>libSceContentDelete: 4/4 (100%)</title>
 <rect x="482.50" y="254.12" width="5.75" height="5.06" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="488.25" y="254.12" width="5.75" height="5.06" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="482.50" y="259.18" width="5.75" height="5.06" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
-<rect x="488.25" y="259.18" width="5.75" height="5.06" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+<rect x="488.25" y="259.18" width="5.75" height="5.06" fill="#2ea043" stroke="#0d1117" stroke-width="0.5"/>
 <rect x="481.50" y="253.12" width="13.50" height="12.12" fill="none" stroke="#0d1117" stroke-width="2"/>
 </g>
 <g><title>libSceGameLiveStreaming: 3/4 (75%)</title>

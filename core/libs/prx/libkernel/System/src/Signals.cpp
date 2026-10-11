@@ -2,7 +2,11 @@
 #include "prx/libc/include/General.hpp"
 #include "prx/libkernel/Pthread/Posix/Common.hpp"
 #include "prx/libc/include/general/VabiMacros.hpp"
+#include "prx/libkernel/Pthread/include/Cancel.hpp"
+#include "prx/libkernel/Time/include/TimedWait.hpp"
+#include <algorithm>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <condition_variable>
 #include <csignal>
@@ -10,6 +14,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -18,6 +23,7 @@
 
 extern "C" int* APS5_VABI __error_nid_postfix();
 extern "C" int APS5_VABI getpid_nid_postfix(void);
+extern "C" int APS5_VABI getuid_nid_postfix(void);
 extern "C" Pthread APS5_VABI scePthreadSelf(void);
 
 struct GuestSignalSet {
@@ -30,6 +36,24 @@ struct GuestSigaction {
     GuestSignalSet mask;
 };
 static_assert(sizeof(GuestSigaction) == 32 && offsetof(GuestSigaction, flags) == 8 && offsetof(GuestSigaction, mask) == 12);
+
+struct GuestSiginfo {
+    int signo;
+    int error;
+    int code;
+    int pid;
+    std::uint32_t uid;
+    int status;
+    std::uint64_t address;
+    std::uint64_t value;
+    std::uint64_t reason[5];
+};
+static_assert(sizeof(GuestSiginfo) == 0x50 && offsetof(GuestSiginfo, address) == 0x18 && offsetof(GuestSiginfo, value) == 0x20);
+
+struct GuestTimespec {
+    std::int64_t seconds;
+    std::int64_t nanoseconds;
+};
 
 namespace {
 using GuestHandler = void (APS5_VABI *)(int);
@@ -81,6 +105,66 @@ bool Install(int guest, const GuestSigaction& action) {
         return false;
     }
     return true;
+}
+
+constexpr int SiUser = 0x10001;
+constexpr int SiLwp = 0x10007;
+constexpr int GuestEfault = 14;
+constexpr int GuestEinval = 22;
+constexpr int GuestEagain = 35;
+constexpr std::uint64_t WaitSliceNanos = 3600000000000ULL;
+std::uint32_t pendingSignals = 0;
+int pendingCodes[33]{};
+TimedWait::Condition pendingRaised;
+
+std::uint32_t Bit(int guest) { return 1u << (guest - 1); }
+
+void Forget(int guest) {
+    if (guest <= 32 && dispositions[guest].handler == 1) pendingSignals &= ~Bit(guest);
+}
+
+int Deliver(int guest) {
+    {
+        std::lock_guard lock(registration);
+        if (dispositions[guest].handler > 1 && !Delivered(dispositions[guest])) throw std::runtime_error("raise: SA_SIGINFO handlers are not delivered");
+    }
+    const int result = std::raise(NativeSignal(guest));
+    if (result) *__error_nid_postfix() = GuestEinval;
+    return result ? -1 : 0;
+}
+
+int Send(int guest, int code) {
+    if (!NativeSignal(guest)) { *__error_nid_postfix() = GuestEinval; return -1; }
+    {
+        std::lock_guard lock(registration);
+        if ((blockedMask.load() & Bit(guest)) != 0) {
+            if (dispositions[guest].handler != 1 && (pendingSignals & Bit(guest)) == 0) {
+                pendingSignals |= Bit(guest);
+                pendingCodes[guest] = code;
+                pendingRaised.NotifyAll();
+            }
+            return 0;
+        }
+    }
+    return Deliver(guest);
+}
+
+void DeliverPending(std::uint32_t signals) {
+    while (signals != 0) {
+        const int guest = std::countr_zero(signals) + 1;
+        signals &= ~Bit(guest);
+        Deliver(guest);
+    }
+}
+
+std::uint64_t WaitDeadline(const GuestTimespec& timeout) {
+    const std::uint64_t now = TimedWait::NowNanos();
+    if (timeout.seconds < 0) return 0;
+    const std::uint64_t limit = std::numeric_limits<std::uint64_t>::max() - now;
+    const auto seconds = static_cast<std::uint64_t>(timeout.seconds);
+    if (seconds >= limit / 1000000000ULL) return std::numeric_limits<std::uint64_t>::max();
+    const std::uint64_t delay = seconds * 1000000000ULL + static_cast<std::uint64_t>(timeout.nanoseconds);
+    return delay >= limit ? std::numeric_limits<std::uint64_t>::max() : now + delay;
 }
 }
 
@@ -171,6 +255,7 @@ GuestHandler APS5_VABI signal_nid_postfix(int guest, GuestHandler handler) {
     if (!Install(guest, action)) { *__error_nid_postfix() = 22; return invalid; }
     const auto previous = reinterpret_cast<GuestHandler>(dispositions[guest].handler);
     dispositions[guest] = action;
+    Forget(guest);
     return previous;
 }
 int APS5_VABI sigaction_nid_postfix(int guest, const GuestSigaction* action, GuestSigaction* previous) {
@@ -181,26 +266,19 @@ int APS5_VABI sigaction_nid_postfix(int guest, const GuestSigaction* action, Gue
     if (action) {
         if (!Install(guest, *action)) { *__error_nid_postfix() = 22; return -1; }
         dispositions[guest] = *action;
+        Forget(guest);
     }
     if (previous) *previous = old;
     return 0;
 }
 int APS5_VABI raise_nid_postfix(int guest) {
-    const int native = NativeSignal(guest);
-    if (!native) { *__error_nid_postfix() = 22; return -1; }
-    {
-        std::lock_guard lock(registration);
-        if (dispositions[guest].handler > 1 && !Delivered(dispositions[guest])) throw std::runtime_error("raise: SA_SIGINFO handlers are not delivered");
-    }
-    const int result = std::raise(native);
-    if (result) *__error_nid_postfix() = 22;
-    return result ? -1 : 0;
+    return Send(guest, SiLwp);
 }
 int APS5_VABI kill_nid_postfix(int pid, int guest) {
     if (guest < 0 || guest > MaxSignal) { *__error_nid_postfix() = 22; return -1; }
     const int self = getpid_nid_postfix();
     if (pid != self && pid != 0 && pid != -self) { *__error_nid_postfix() = 3; return -1; }
-    return guest == 0 ? 0 : raise_nid_postfix(guest);
+    return guest == 0 ? 0 : Send(guest, SiUser);
 }
 int APS5_VABI pthread_kill_nid_postfix(Pthread thread, int guest) {
     if (guest < 0 || guest > MaxSignal) return PosixThread::GUEST_EINVAL;
@@ -222,21 +300,27 @@ int APS5_VABI sigaltstack_nid_postfix(const GuestStack* stack, GuestStack* previ
     return 0;
 }
 int APS5_VABI _sigprocmask_nid_postfix(int how, const GuestSignalSet* set, GuestSignalSet* previousSet) {
-    std::lock_guard lock(registration);
-    if (previousSet != nullptr) {
-        previousSet->bits[0] = blockedMask.load();
-        previousSet->bits[1] = 0;
-        previousSet->bits[2] = 0;
-        previousSet->bits[3] = 0;
-    }
-    if (set != nullptr) {
-        switch (how) {
-            case 1: blockedMask.fetch_or(set->bits[0]); break;
-            case 2: blockedMask.fetch_and(~set->bits[0]); break;
-            case 3: blockedMask.store(set->bits[0]); break;
-            default: throw std::invalid_argument("_sigprocmask: invalid how");
+    std::uint32_t unblocked = 0;
+    {
+        std::lock_guard lock(registration);
+        if (previousSet != nullptr) {
+            previousSet->bits[0] = blockedMask.load();
+            previousSet->bits[1] = 0;
+            previousSet->bits[2] = 0;
+            previousSet->bits[3] = 0;
         }
+        if (set != nullptr) {
+            switch (how) {
+                case 1: blockedMask.fetch_or(set->bits[0]); break;
+                case 2: blockedMask.fetch_and(~set->bits[0]); break;
+                case 3: blockedMask.store(set->bits[0]); break;
+                default: throw std::invalid_argument("_sigprocmask: invalid how");
+            }
+        }
+        unblocked = pendingSignals & ~blockedMask.load();
+        pendingSignals &= ~unblocked;
     }
+    DeliverPending(unblocked);
     return 0;
 }
 
@@ -250,12 +334,41 @@ int APS5_VABI pthread_sigmask_nid_postfix(int how, const GuestSignalSet* set, Gu
     return _sigprocmask_nid_postfix(how, set, previousSet);
 }
 
-int APS5_VABI sigtimedwait_nid_postfix(const GuestSignalSet* set, void* info, const void* timeout) {
-    (void)set;
-    (void)info;
-    (void)timeout;
-    NotImplemented_nid_no_patch("sigtimedwait: waiting for a pending signal");
-    return -1;
+int APS5_VABI sigtimedwait_nid_postfix(const GuestSignalSet* set, GuestSiginfo* info, const GuestTimespec* timeout) {
+    ThreadCancel::Check();
+    if (set == nullptr) { *__error_nid_postfix() = GuestEfault; return -1; }
+    const std::uint32_t waited = set->bits[0] & ~(Bit(GuestSigkill) | Bit(GuestSigstop));
+    const bool valid = timeout == nullptr || (timeout->nanoseconds >= 0 && timeout->nanoseconds < 1000000000);
+    const std::uint64_t deadline = timeout != nullptr && valid ? WaitDeadline(*timeout) : 0;
+    std::unique_lock lock(registration);
+    for (;;) {
+        if (const std::uint32_t ready = pendingSignals & waited) {
+            const int guest = std::countr_zero(ready) + 1;
+            pendingSignals &= ~Bit(guest);
+            const int code = pendingCodes[guest];
+            lock.unlock();
+            if (info != nullptr) {
+                *info = {};
+                info->signo = guest;
+                info->code = code;
+                info->pid = getpid_nid_postfix();
+                info->uid = static_cast<std::uint32_t>(getuid_nid_postfix());
+            }
+            return guest;
+        }
+        if (ThreadCancel::Requested()) {
+            lock.unlock();
+            ThreadCancel::Check();
+        }
+        std::optional<std::uint64_t> until;
+        if (timeout != nullptr) {
+            if (!valid) { *__error_nid_postfix() = GuestEinval; return -1; }
+            const std::uint64_t now = TimedWait::NowNanos();
+            if (now >= deadline) { *__error_nid_postfix() = GuestEagain; return -1; }
+            until = now + std::min(deadline - now, WaitSliceNanos);
+        }
+        ThreadCancel::Wait(pendingRaised, lock, until);
+    }
 }
 }
 

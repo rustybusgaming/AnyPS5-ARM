@@ -139,7 +139,8 @@ int main() {
     received = 0;
     Require(sigprocmask_nid_postfix(1, &termMask, nullptr) == 0);
     Require(raise_nid_postfix(15) == 0 && received == 0);
-    Require(sigprocmask_nid_postfix(2, &termMask, nullptr) == 0);
+    Require(sigprocmask_nid_postfix(2, &termMask, nullptr) == 0 && received == 15);
+    received = 0;
     Require(raise_nid_postfix(15) == 0 && received == 15);
     GuestSignalSet urgMask{{1u << 15, 0, 0, 0}};
     received = 0;

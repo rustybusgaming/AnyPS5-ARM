@@ -1,4 +1,7 @@
-add_library(libSceOpusDec SHARED EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/Export.cpp)
+add_library(libSceOpusDec SHARED EXCLUDE_FROM_ALL
+    ${CMAKE_CURRENT_SOURCE_DIR}/Export.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/OpusDecoder.cpp
+)
 target_include_directories(libSceOpusDec PRIVATE ${LIBS_INCLUDE_DIR})
 target_link_libraries(libSceOpusDec PRIVATE ffmpeg)
 configure_windows_unwind(libSceOpusDec)

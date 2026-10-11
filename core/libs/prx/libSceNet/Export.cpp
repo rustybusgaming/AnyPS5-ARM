@@ -67,6 +67,7 @@ constexpr int NET_ERROR_RESOLVER_ENODNS = static_cast<int>(0x804101E1u);
 
 constexpr int NET_AF_INET = 2;
 constexpr int NET_AF_INET6 = 28;
+constexpr std::uint32_t NET_IFF_POINTOPOINT = 0x10;
 constexpr int NET_SOCK_STREAM = 1;
 constexpr int NET_SOCK_DGRAM = 2;
 constexpr int NET_SOCK_RAW = 3;
@@ -306,6 +307,26 @@ int fail(int err) {
     return NET_ERROR_BASE | err;
 }
 
+struct InterfaceAddress {
+    InterfaceAddress* next;
+    char* name;
+    std::uint32_t flags;
+    void* address;
+    void* netmask;
+    void* destination;
+    void* data;
+};
+static_assert(sizeof(InterfaceAddress) == 56);
+
+std::string address_text(const void* address) {
+    const auto* bytes = static_cast<const std::uint8_t*>(address);
+    char text[64]{};
+    if (bytes[1] == NET_AF_INET) inet_ntop(AF_INET, bytes + 4, text, sizeof(text));
+    else if (bytes[1] == NET_AF_INET6) inet_ntop(AF_INET6, bytes + 8, text, sizeof(text));
+    else return "family " + std::to_string(bytes[1]);
+    return text;
+}
+
 void set_resolver_error(int rid, int error) {
     std::lock_guard lk(g_mutex);
     const auto resolver = g_resolvers.find(rid);
@@ -365,6 +386,10 @@ std::int64_t message_length(const NetMsghdr* message) {
 }
 
 }  // namespace
+
+extern "C" int APS5_VABI getifaddrs_nid_postfix(InterfaceAddress** list);
+extern "C" void APS5_VABI freeifaddrs_nid_postfix(InterfaceAddress* list);
+extern "C" int* APS5_VABI __error_nid_postfix();
 
 extern "C" {
 
@@ -1270,8 +1295,18 @@ int APS5_VABI sceNetResolverStartNtoaMultipleRecords(int rid, const char* hostna
     return sceNetResolverStartNtoaMultipleRecordsEx(rid, hostname, info, timeout, retry, flags);
 }
 
-int APS5_VABI sceNetShowIfconfig() {
-    NotImplemented_nid_no_patch(__func__);
+int APS5_VABI sceNetShowIfconfig(void) {
+    InterfaceAddress* list = nullptr;
+    if (getifaddrs_nid_postfix(&list) != 0) return fail(*__error_nid_postfix());
+    for (const InterfaceAddress* item = list; item != nullptr; item = item->next) {
+        const char* family = static_cast<const std::uint8_t*>(item->address)[1] == NET_AF_INET6 ? "inet6" : "inet";
+        const char* destinationLabel = (item->flags & NET_IFF_POINTOPOINT) != 0 ? " --> " : " broadcast ";
+        const std::string destination = item->destination != nullptr ? destinationLabel + address_text(item->destination) : std::string();
+        std::fprintf(stderr, "[sceNet] %s flags=%x %s %s netmask %s%s\n", item->name, item->flags, family,
+                     address_text(item->address).c_str(), address_text(item->netmask).c_str(), destination.c_str());
+    }
+    std::fflush(stderr);
+    freeifaddrs_nid_postfix(list);
     return 0;
 }
 

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <atomic>
 #include <chrono>
 #include <thread>
 using Handler = void (APS5_VABI *)(int);
@@ -12,6 +13,8 @@ Handler APS5_VABI signal_nid_postfix(int, Handler);
 int APS5_VABI raise_nid_postfix(int);
 int APS5_VABI pthread_kill_nid_postfix(void*, int);
 void* APS5_VABI scePthreadSelf();
+int APS5_VABI scePthreadCreate(void**, const void*, void* (APS5_VABI*)(void*), void*, const char*);
+int APS5_VABI scePthreadJoin(void*, void**);
 int APS5_VABI sigaction_nid_postfix(int, const void*, void*);
 int APS5_VABI sigprocmask_nid_postfix(int, const void*, void*);
 int APS5_VABI pthread_sigmask_nid_postfix(int, const void*, void*);
@@ -39,6 +42,28 @@ void APS5_VABI Callback(int value) {
     handlerReturn = reinterpret_cast<std::uintptr_t>(__builtin_return_address(0));
 }
 static void Require(bool value) { if (!value) std::abort(); }
+std::atomic<void*> handlerThread{nullptr};
+std::atomic<int> handled{0};
+std::atomic<bool> spinning{false};
+std::atomic<bool> stop{false};
+void APS5_VABI OnThread(int value) {
+    received = value;
+    handlerThread.store(scePthreadSelf());
+    handled.fetch_add(1);
+}
+void* APS5_VABI Spin(void*) {
+    spinning.store(true);
+    while (!stop.load()) std::this_thread::yield();
+    return nullptr;
+}
+static bool WaitFor(const std::atomic<int>& value, int expected) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (value.load() != expected) {
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return true;
+}
 int main() {
     const auto invalid = reinterpret_cast<Handler>(static_cast<std::uintptr_t>(-1));
     const auto ignore = reinterpret_cast<Handler>(std::uintptr_t{1});
@@ -60,10 +85,8 @@ int main() {
     Require(pthread_kill_nid_postfix(nullptr, 15) == 3);
     Require(pthread_kill_nid_postfix(nullptr, 128) == 3);
     Require(pthread_kill_nid_postfix(nullptr, 129) == 22);
-    bool threw = false;
-    try { pthread_kill_nid_postfix(reinterpret_cast<void*>(std::uintptr_t{0x10}), 15); }
-    catch (const std::runtime_error&) { threw = true; }
-    Require(threw && received == 0);
+    Require(pthread_kill_nid_postfix(reinterpret_cast<void*>(std::uintptr_t{0x10}), 15) == 3 && received == 0);
+    Require(pthread_kill_nid_postfix(reinterpret_cast<void*>(std::uintptr_t{0x10}), 0) == 3);
     Require(signal_nid_postfix(15, ignore) != invalid);
     received = 0;
     Require(raise_nid_postfix(15) == 0 && received == 0);
@@ -198,6 +221,32 @@ int main() {
         Require(signal_nid_postfix(13, Callback) == Callback);
         Require(sigaction_nid_postfix(13, nullptr, &current) == 0);
         Require(current.handler == callback && current.flags == 0x2 && current.mask.bits[3] == 0);
+    }
+    {
+        Require(signal_nid_postfix(15, OnThread) != invalid);
+        void* spinner = nullptr;
+        Require(scePthreadCreate(&spinner, nullptr, Spin, nullptr, "spinner") == 0);
+        while (!spinning.load()) std::this_thread::yield();
+        Require(pthread_kill_nid_postfix(spinner, 0) == 0 && handled.load() == 0);
+        Require(pthread_kill_nid_postfix(spinner, 200) == 22);
+        Require(pthread_kill_nid_postfix(spinner, 30) == 22);
+        Require(pthread_kill_nid_postfix(spinner, 15) == 0);
+        Require(WaitFor(handled, 1) && handlerThread.load() == spinner && received == 15);
+        GuestSignalSet term{{1u << 14, 0, 0, 0}};
+        Require(sigprocmask_nid_postfix(1, &term, nullptr) == 0);
+        Require(pthread_kill_nid_postfix(spinner, 15) == 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        Require(handled.load() == 1);
+        Require(sigprocmask_nid_postfix(2, &term, nullptr) == 0);
+        Require(WaitFor(handled, 2) && handlerThread.load() == spinner);
+        Require(signal_nid_postfix(15, ignore) == OnThread);
+        Require(pthread_kill_nid_postfix(spinner, 15) == 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        Require(handled.load() == 2);
+        stop.store(true);
+        Require(scePthreadJoin(spinner, nullptr) == 0);
+        Require(pthread_kill_nid_postfix(spinner, 15) == 3 && pthread_kill_nid_postfix(spinner, 0) == 3);
+        Require(signal_nid_postfix(15, nullptr) == ignore);
     }
     Require(signal_nid_postfix(13, invalid) == Callback);
     Require(sigaction_nid_postfix(13, nullptr, &current) == 0 && current.handler == static_cast<std::uintptr_t>(-1) && current.flags == 0x2);

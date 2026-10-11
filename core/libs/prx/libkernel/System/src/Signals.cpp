@@ -3,6 +3,7 @@
 #include "prx/libkernel/Pthread/Posix/Common.hpp"
 #include "prx/libc/include/general/VabiMacros.hpp"
 #include "prx/libkernel/Pthread/include/Cancel.hpp"
+#include "prx/libkernel/Pthread/include/Pthread.hpp"
 #include "prx/libkernel/Time/include/TimedWait.hpp"
 #include <algorithm>
 #include <atomic>
@@ -14,17 +15,29 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 #include <limits>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <thread>
+#include <utility>
+#include <vector>
+#ifndef _WIN32
+#include <cerrno>
+#include <pthread.h>
+#endif
 
 extern "C" int* APS5_VABI __error_nid_postfix();
 extern "C" int APS5_VABI getpid_nid_postfix(void);
 extern "C" int APS5_VABI getuid_nid_postfix(void);
 extern "C" Pthread APS5_VABI scePthreadSelf(void);
+#ifdef _WIN32
+bool DeliverToGuestThread(Pthread thread, void (APS5_VABI* handler)(int, void*), int signum);
+#endif
 
 struct GuestSignalSet {
     std::uint32_t bits[4];
@@ -113,14 +126,31 @@ constexpr int GuestEfault = 14;
 constexpr int GuestEinval = 22;
 constexpr int GuestEagain = 35;
 constexpr std::uint64_t WaitSliceNanos = 3600000000000ULL;
-std::uint32_t pendingSignals = 0;
-int pendingCodes[33]{};
+
+struct PendingSet {
+    std::uint32_t signals = 0;
+    int codes[33]{};
+};
+PendingSet processPending;
+std::map<std::int64_t, PendingSet> threadPending;
 TimedWait::Condition pendingRaised;
 
 std::uint32_t Bit(int guest) { return 1u << (guest - 1); }
 
+void MarkPending(PendingSet& pending, int guest, int code) {
+    if ((pending.signals & Bit(guest)) != 0) return;
+    pending.signals |= Bit(guest);
+    pending.codes[guest] = code;
+    pendingRaised.NotifyAll();
+}
+
 void Forget(int guest) {
-    if (guest <= 32 && dispositions[guest].handler == 1) pendingSignals &= ~Bit(guest);
+    if (guest > 32 || dispositions[guest].handler != 1) return;
+    processPending.signals &= ~Bit(guest);
+    for (auto entry = threadPending.begin(); entry != threadPending.end();) {
+        entry->second.signals &= ~Bit(guest);
+        entry = entry->second.signals == 0 ? threadPending.erase(entry) : std::next(entry);
+    }
 }
 
 int Deliver(int guest) {
@@ -128,32 +158,70 @@ int Deliver(int guest) {
         std::lock_guard lock(registration);
         if (dispositions[guest].handler > 1 && !Delivered(dispositions[guest])) throw std::runtime_error("raise: SA_SIGINFO handlers are not delivered");
     }
-    const int result = std::raise(NativeSignal(guest));
-    if (result) *__error_nid_postfix() = GuestEinval;
-    return result ? -1 : 0;
+    return std::raise(NativeSignal(guest)) == 0 ? 0 : GuestEinval;
 }
 
-int Send(int guest, int code) {
-    if (!NativeSignal(guest)) { *__error_nid_postfix() = GuestEinval; return -1; }
+#ifdef _WIN32
+void APS5_VABI RunHandler_nid_no_patch(int guest, void*) {
+    if ((blockedMask.load() & Bit(guest)) != 0) return;
+    const auto callback = handlers[guest].load();
+    if (reinterpret_cast<std::uintptr_t>(callback) > 1) callback(guest);
+}
+#endif
+
+int Signal(Pthread thread, int guest) {
+    const int native = NativeSignal(guest);
+    std::uintptr_t handler = 0;
+    {
+        std::lock_guard lock(registration);
+        handler = dispositions[guest].handler;
+        if (handler > 1 && !Delivered(dispositions[guest])) throw std::runtime_error("pthread_kill: SA_SIGINFO handlers are not delivered");
+    }
+    if (handler == 1) return 0;
+    if (handler == 0) return std::raise(native) == 0 ? 0 : GuestEinval;
+#ifdef _WIN32
+    return DeliverToGuestThread(thread, RunHandler_nid_no_patch, guest) ? 0 : PosixThread::GUEST_ESRCH;
+#else
+    std::lock_guard lock(thread->_join_mtx);
+    if (thread->_finished.load(std::memory_order_acquire)) return PosixThread::GUEST_ESRCH;
+    const int result = pthread_kill(thread->hostThread, native);
+    if (result == ESRCH) return PosixThread::GUEST_ESRCH;
+    if (result != 0) throw std::system_error(result, std::generic_category(), "pthread_kill: cannot signal the target thread");
+    return 0;
+#endif
+}
+
+int Post(Pthread target, int guest, int code) {
+    if (!NativeSignal(guest)) return GuestEinval;
     {
         std::lock_guard lock(registration);
         if ((blockedMask.load() & Bit(guest)) != 0) {
-            if (dispositions[guest].handler != 1 && (pendingSignals & Bit(guest)) == 0) {
-                pendingSignals |= Bit(guest);
-                pendingCodes[guest] = code;
-                pendingRaised.NotifyAll();
-            }
+            if (dispositions[guest].handler != 1) MarkPending(target != nullptr ? threadPending[target->tid] : processPending, guest, code);
             return 0;
         }
     }
-    return Deliver(guest);
+    if (target == nullptr || target == scePthreadSelf()) return Deliver(guest);
+    return Signal(target, guest);
 }
 
-void DeliverPending(std::uint32_t signals) {
+void DeliverPending(std::uint32_t signals, std::vector<std::pair<std::int64_t, std::uint32_t>>& others) {
     while (signals != 0) {
         const int guest = std::countr_zero(signals) + 1;
         signals &= ~Bit(guest);
         Deliver(guest);
+    }
+    for (auto [id, pending] : others) {
+        const Pthread thread = AcquireGuestThreadById(id);
+        if (thread == nullptr) continue;
+        struct Reference {
+            Pthread thread;
+            ~Reference() { ReleaseGuestThread(thread); }
+        } reference{thread};
+        while (pending != 0 && !thread->_finished.load(std::memory_order_acquire)) {
+            const int guest = std::countr_zero(pending) + 1;
+            pending &= ~Bit(guest);
+            Signal(thread, guest);
+        }
     }
 }
 
@@ -272,20 +340,32 @@ int APS5_VABI sigaction_nid_postfix(int guest, const GuestSigaction* action, Gue
     return 0;
 }
 int APS5_VABI raise_nid_postfix(int guest) {
-    return Send(guest, SiLwp);
+    const int error = Post(scePthreadSelf(), guest, SiLwp);
+    if (error == 0) return 0;
+    *__error_nid_postfix() = error;
+    return -1;
 }
 int APS5_VABI kill_nid_postfix(int pid, int guest) {
     if (guest < 0 || guest > MaxSignal) { *__error_nid_postfix() = 22; return -1; }
     const int self = getpid_nid_postfix();
     if (pid != self && pid != 0 && pid != -self) { *__error_nid_postfix() = 3; return -1; }
-    return guest == 0 ? 0 : Send(guest, SiUser);
+    if (guest == 0) return 0;
+    const int error = Post(nullptr, guest, SiUser);
+    if (error == 0) return 0;
+    *__error_nid_postfix() = error;
+    return -1;
 }
 int APS5_VABI pthread_kill_nid_postfix(Pthread thread, int guest) {
     if (guest < 0 || guest > MaxSignal) return PosixThread::GUEST_EINVAL;
     if (thread == nullptr) return PosixThread::GUEST_ESRCH;
-    if (guest == 0) return 0;
-    if (thread != scePthreadSelf()) NotImplemented_nid_no_patch(("pthread_kill signal " + std::to_string(guest) + " to another thread").c_str());
-    return raise_nid_postfix(guest) == 0 ? 0 : *__error_nid_postfix();
+    if (thread == scePthreadSelf()) return guest == 0 ? 0 : Post(thread, guest, SiLwp);
+    if (!AcquireGuestThread(thread)) return PosixThread::GUEST_ESRCH;
+    struct Reference {
+        Pthread thread;
+        ~Reference() { ReleaseGuestThread(thread); }
+    } reference{thread};
+    if (thread->_finished.load(std::memory_order_acquire)) return PosixThread::GUEST_ESRCH;
+    return guest == 0 ? 0 : Post(thread, guest, SiLwp);
 }
 int APS5_VABI sigaltstack_nid_postfix(const GuestStack* stack, GuestStack* previous) {
     GuestStack replacement = alternateStack;
@@ -300,7 +380,9 @@ int APS5_VABI sigaltstack_nid_postfix(const GuestStack* stack, GuestStack* previ
     return 0;
 }
 int APS5_VABI _sigprocmask_nid_postfix(int how, const GuestSignalSet* set, GuestSignalSet* previousSet) {
+    const std::int64_t self = scePthreadSelf()->tid;
     std::uint32_t unblocked = 0;
+    std::vector<std::pair<std::int64_t, std::uint32_t>> others;
     {
         std::lock_guard lock(registration);
         if (previousSet != nullptr) {
@@ -317,10 +399,18 @@ int APS5_VABI _sigprocmask_nid_postfix(int how, const GuestSignalSet* set, Guest
                 default: throw std::invalid_argument("_sigprocmask: invalid how");
             }
         }
-        unblocked = pendingSignals & ~blockedMask.load();
-        pendingSignals &= ~unblocked;
+        const std::uint32_t open = ~blockedMask.load();
+        unblocked = processPending.signals & open;
+        processPending.signals &= ~unblocked;
+        for (auto entry = threadPending.begin(); entry != threadPending.end();) {
+            const std::uint32_t signals = entry->second.signals & open;
+            entry->second.signals &= ~signals;
+            if (entry->first == self) unblocked |= signals;
+            else if (signals != 0) others.emplace_back(entry->first, signals);
+            entry = entry->second.signals == 0 ? threadPending.erase(entry) : std::next(entry);
+        }
     }
-    DeliverPending(unblocked);
+    DeliverPending(unblocked, others);
     return 0;
 }
 
@@ -340,12 +430,17 @@ int APS5_VABI sigtimedwait_nid_postfix(const GuestSignalSet* set, GuestSiginfo* 
     const std::uint32_t waited = set->bits[0] & ~(Bit(GuestSigkill) | Bit(GuestSigstop));
     const bool valid = timeout == nullptr || (timeout->nanoseconds >= 0 && timeout->nanoseconds < 1000000000);
     const std::uint64_t deadline = timeout != nullptr && valid ? WaitDeadline(*timeout) : 0;
+    const std::int64_t self = scePthreadSelf()->tid;
     std::unique_lock lock(registration);
     for (;;) {
-        if (const std::uint32_t ready = pendingSignals & waited) {
+        const auto own = threadPending.find(self);
+        const std::uint32_t mine = own != threadPending.end() ? own->second.signals : 0;
+        if (const std::uint32_t ready = (mine | processPending.signals) & waited) {
             const int guest = std::countr_zero(ready) + 1;
-            pendingSignals &= ~Bit(guest);
-            const int code = pendingCodes[guest];
+            PendingSet& from = (mine & Bit(guest)) != 0 ? own->second : processPending;
+            from.signals &= ~Bit(guest);
+            const int code = from.codes[guest];
+            if (own != threadPending.end() && own->second.signals == 0) threadPending.erase(own);
             lock.unlock();
             if (info != nullptr) {
                 *info = {};

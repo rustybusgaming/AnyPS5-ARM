@@ -1,4 +1,5 @@
 #include "prx/libc/include/general/VabiMacros.hpp"
+#include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdint>
@@ -31,6 +32,8 @@ Handler APS5_VABI signal_nid_postfix(int, Handler);
 int APS5_VABI raise_nid_postfix(int);
 int APS5_VABI kill_nid_postfix(int, int);
 int APS5_VABI getpid_nid_postfix(void);
+void* APS5_VABI scePthreadSelf(void);
+int APS5_VABI pthread_kill_nid_postfix(void*, int);
 int* APS5_VABI __error_nid_postfix();
 }
 namespace {
@@ -105,19 +108,29 @@ int main() {
     Require(raise_nid_postfix(30) == -1 && *__error_nid_postfix() == 22);
 
     int waited = 0;
+    Require(raise_nid_postfix(15) == 0);
+    std::thread other([&] { waited = TimesOut(term, &poll) ? 0 : -1; });
+    other.join();
+    Require(waited == 0);
+    Require(sigtimedwait_nid_postfix(&term, nullptr, &poll) == 15);
     std::thread waiter([&] {
         const GuestTimespec ten{10, 0};
-        waited = sigtimedwait_nid_postfix(&term, nullptr, &ten);
+        waited = sigtimedwait_nid_postfix(&term, &info, &ten);
     });
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    Require(raise_nid_postfix(15) == 0);
+    Require(kill_nid_postfix(getpid_nid_postfix(), 15) == 0);
     waiter.join();
-    Require(waited == 15);
-    std::thread forever([&] { waited = sigtimedwait_nid_postfix(&both, nullptr, nullptr); });
+    Require(waited == 15 && info.code == SiUser);
+    std::atomic<void*> target{nullptr};
+    std::thread forever([&] {
+        target.store(scePthreadSelf());
+        waited = sigtimedwait_nid_postfix(&both, &info, nullptr);
+    });
+    while (target.load() == nullptr) std::this_thread::yield();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    Require(raise_nid_postfix(2) == 0);
+    Require(pthread_kill_nid_postfix(target.load(), 2) == 0);
     forever.join();
-    Require(waited == 2);
+    Require(waited == 2 && info.code == SiLwp);
 
     deliveries = 0;
     Require(raise_nid_postfix(2) == 0 && raise_nid_postfix(15) == 0);

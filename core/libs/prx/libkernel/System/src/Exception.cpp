@@ -479,6 +479,10 @@ bool RaiseOn(Pthread thread) {
 }
 
 #ifdef _WIN32
+bool DeliverToGuestThread(Pthread thread, void (APS5_VABI* handler)(int, void*), int signum) {
+    return RaiseOn(thread, handler, signum);
+}
+
 extern "C" [[noreturn]] void Aps5RedirectedEntry(void* delivery) {
     RedirectedEntry(static_cast<Delivery*>(delivery));
 }

@@ -256,6 +256,35 @@ void SetLiveGuestThreadsAffinity(KernelCpumask mask) {
     }
 }
 
+static bool RetainThread(PthreadPrivate* thread) {
+    if (thread->_adopted)
+        return true;
+    unsigned count = thread->references.load(std::memory_order_acquire);
+    do {
+        if (count == 0)
+            return false;
+    } while (!thread->references.compare_exchange_weak(count, count + 1, std::memory_order_acq_rel));
+    return true;
+}
+
+bool AcquireGuestThread(PthreadPrivate* thread) {
+    auto& registry = CpuClocks();
+    std::lock_guard lock(registry.lock);
+    if (std::none_of(registry.threads.begin(), registry.threads.end(), [&](const auto& entry) { return entry.second == thread; }))
+        return false;
+    return RetainThread(thread);
+}
+
+PthreadPrivate* AcquireGuestThreadById(std::int64_t id) {
+    auto& registry = CpuClocks();
+    std::lock_guard lock(registry.lock);
+    for (const auto& [clock, thread] : registry.threads) {
+        if (thread->tid == id)
+            return RetainThread(thread) ? thread : nullptr;
+    }
+    return nullptr;
+}
+
 bool GuestThreadCpuNanos(int cpuClockThread, std::uint64_t* nanos) {
     auto& registry = CpuClocks();
     std::lock_guard lock(registry.lock);
@@ -429,6 +458,10 @@ static void ReleaseThread(PthreadPrivate* thread) {
         throw std::system_error(GetLastError(), std::system_category(), "Closing guest thread handle");
 #endif
     delete thread;
+}
+
+void ReleaseGuestThread(PthreadPrivate* thread) {
+    ReleaseThread(thread);
 }
 
 #ifdef _WIN32

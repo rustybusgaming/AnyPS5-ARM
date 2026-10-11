@@ -292,11 +292,9 @@ std::int32_t APS5_VABI sceAudioPropagationSourceSetAudioPaths(AudioPropagationHa
 }
 
 std::int32_t APS5_VABI sceAudioPropagationSourceSetAudioPath(AudioPropagationHandle path, const void* data, float gain) {
-    static_cast<void>(path);
     static_cast<void>(data);
     static_cast<void>(gain);
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+    throw std::invalid_argument(std::string(__func__) + ": " + std::to_string(path) + " is not an audio path (sources have 0 audio paths)");
 }
 
 std::int32_t APS5_VABI sceAudioPropagationSourceRender(AudioPropagationHandle system, const RenderInfo* infos, std::uint32_t count) {

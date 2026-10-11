@@ -169,8 +169,9 @@ int APS5_VABI sceAppContentAddcontEnqueueDownload(uint32_t service_label, const 
     return SCE_APP_CONTENT_ERROR_DRM_NO_ENTITLEMENT;
 }
 
-int APS5_VABI sceAppContentGetAddcontDownloadProgress(void) {
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+int APS5_VABI sceAppContentGetAddcontDownloadProgress(uint32_t service_label, const NpUnifiedEntitlementLabel* entitlement_label, void* progress) {
+    (void)service_label;
+    if (!entitlement_label || !progress) return SCE_APP_CONTENT_ERROR_PARAMETER;
+    return SCE_APP_CONTENT_ERROR_DRM_NO_ENTITLEMENT;
 }
 }

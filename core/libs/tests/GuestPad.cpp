@@ -32,6 +32,7 @@ int APS5_VABI scePadSetFeatureReport(int);
 int APS5_VABI scePadOutputReport(int);
 int APS5_VABI scePadVrControllerGetDeviceInformation(int, void*);
 int APS5_VABI scePadVrControllerRead(int, void*, int);
+int APS5_VABI scePadVrControllerReadState(int, void*);
 }
 
 static void Require(bool value) { if (!value) std::abort(); }
@@ -167,6 +168,7 @@ static void CheckAbsentDevices(int handle) {
         Require(scePadOutputReport(target) == PAD_ERROR_INVALID_HANDLE);
         Require(scePadVrControllerGetDeviceInformation(target, buffer) == PAD_ERROR_INVALID_HANDLE);
         Require(scePadVrControllerRead(target, buffer, 1) == PAD_ERROR_INVALID_HANDLE);
+        Require(scePadVrControllerReadState(target, buffer) == PAD_ERROR_INVALID_HANDLE);
     }
 }
 

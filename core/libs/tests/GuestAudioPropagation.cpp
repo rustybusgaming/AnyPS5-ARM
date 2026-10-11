@@ -117,6 +117,9 @@ int main() {
     Require(sceAudioPropagationSourceGetAudioPathCount(source, &count) == 0 && count == 0, "source reports audio paths");
     AudioPropagationHandle path = 0;
     RequireThrows<std::invalid_argument>([&] { sceAudioPropagationSourceGetAudioPath(source, 0, &path); }, "audio path without paths");
+    const std::uint8_t pathData[64]{};
+    RequireThrows<std::invalid_argument>([&] { sceAudioPropagationSourceSetAudioPath(source, pathData, 1.0f); }, "set audio path on a source");
+    RequireThrows<std::invalid_argument>([&] { sceAudioPropagationSourceSetAudioPath(0x1234, pathData, 1.0f); }, "set unknown audio path");
 
     std::uint8_t rays[AudioPropagation::RaySize * 2]{};
     count = 7;

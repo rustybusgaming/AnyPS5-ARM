@@ -21,6 +21,7 @@ int APS5_VABI sceAppContentGetAddcontInfoList(uint32_t, void*, uint32_t, uint32_
 int APS5_VABI sceAppContentDownloadDataGetAvailableSpaceKb(const AppContentMountPoint*, size_t*);
 int APS5_VABI sceAppContentAppParamGetInt(uint32_t, int32_t*);
 int APS5_VABI sceAppContentAddcontEnqueueDownload(uint32_t, const NpUnifiedEntitlementLabel*);
+int APS5_VABI sceAppContentGetAddcontDownloadProgress(uint32_t, const NpUnifiedEntitlementLabel*, void*);
 }
 
 static constexpr int ErrorParameter = static_cast<int>(0x80D90002);
@@ -126,6 +127,14 @@ int main() {
     Require(sceAppContentGetAddcontInfo(0, &label, nullptr) == ErrorParameter);
     Require(sceAppContentAddcontEnqueueDownload(0, &label) == ErrorDrmNoEntitlement);
     Require(sceAppContentAddcontEnqueueDownload(0, nullptr) == ErrorParameter);
+    unsigned char progress[16];
+    std::memset(progress, 0x5a, sizeof(progress));
+    unsigned char untouchedProgress[16];
+    std::memcpy(untouchedProgress, progress, sizeof(progress));
+    Require(sceAppContentGetAddcontDownloadProgress(0, &label, progress) == ErrorDrmNoEntitlement);
+    Require(std::memcmp(progress, untouchedProgress, sizeof(progress)) == 0);
+    Require(sceAppContentGetAddcontDownloadProgress(0, nullptr, progress) == ErrorParameter);
+    Require(sceAppContentGetAddcontDownloadProgress(0, &label, nullptr) == ErrorParameter);
 
     uint32_t hitNum = 0x5a5a5a5a;
     Require(sceAppContentGetAddcontInfoList(0, nullptr, 0, &hitNum) == 0);

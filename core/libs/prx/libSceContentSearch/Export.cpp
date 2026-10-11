@@ -62,23 +62,32 @@ int APS5_VABI sceContentSearchSearchContent(const void* column_set, std::uint32_
     return 0;
 }
 
-int APS5_VABI sceContentSearchGetContentLastUpdateId(void) {
-    NotImplemented_nid_no_patch(__func__);
+int APS5_VABI sceContentSearchGetContentLastUpdateId(std::int64_t* last_update_id) {
+    if (last_update_id == nullptr) APS5_INVALID_ARG_EX;
+    if (!g_initialized.load()) return CONTENT_SEARCH_ERROR_NOT_INITIALIZED;
+    *last_update_id = 0;
     return 0;
 }
 
-int APS5_VABI sceContentSearchOpenMetadataByContentId(void) {
-    NotImplemented_nid_no_patch(__func__);
+int APS5_VABI sceContentSearchOpenMetadataByContentId(std::int64_t content_id, int* metadata_id) {
+    if (metadata_id == nullptr) APS5_INVALID_ARG_EX;
+    if (!g_initialized.load()) return CONTENT_SEARCH_ERROR_NOT_INITIALIZED;
+    throw std::runtime_error(std::string(__func__) + ": no content with id " + std::to_string(content_id));
+}
+
+int APS5_VABI sceContentSearchGetTotalContentSize(const void* column_set, std::uint32_t column_set_length, std::int64_t* size, std::int64_t* last_update_id) {
+    if (size == nullptr || (column_set == nullptr && column_set_length != 0)) APS5_INVALID_ARG_EX;
+    if (!g_initialized.load()) return CONTENT_SEARCH_ERROR_NOT_INITIALIZED;
+    *size = 0;
+    if (last_update_id != nullptr) *last_update_id = 0;
     return 0;
 }
 
-int APS5_VABI sceContentSearchGetTotalContentSize(void) {
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
-}
-
-int APS5_VABI sceContentSearchGetNumOfContent(void) {
-    NotImplemented_nid_no_patch(__func__);
+int APS5_VABI sceContentSearchGetNumOfContent(const void* column_set, std::uint32_t column_set_length, std::int64_t* num_of_content, std::int64_t* last_update_id) {
+    if (num_of_content == nullptr || (column_set == nullptr && column_set_length != 0)) APS5_INVALID_ARG_EX;
+    if (!g_initialized.load()) return CONTENT_SEARCH_ERROR_NOT_INITIALIZED;
+    *num_of_content = 0;
+    if (last_update_id != nullptr) *last_update_id = 0;
     return 0;
 }
 
